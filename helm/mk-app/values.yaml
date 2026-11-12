@@ -1,0 +1,68 @@
+# Safe defaults. Layers on top of this file:
+#   gitops/envs/<env>/values.yaml  -> image tags and sizing (CI writes the tags)
+#   ArgoCD root app                -> cluster facts from Terraform (registry, DB host, cert, ...)
+
+environment: dev            # dev | prod  (used for labels only)
+imageRegistry: ""           # required, e.g. 123456789012.dkr.ecr.ap-south-1.amazonaws.com
+
+backend:
+  image: mk-platform/backend
+  tag: ""                   # required, git SHA written by CI
+  port: 8000
+  minReplicas: 2            # autoscaling range
+  maxReplicas: 6
+  cpuTarget: 70             # add pods when average CPU passes 70% of the request
+  minAvailable: 1           # pods that must stay up during node drains
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      memory: 384Mi         # no CPU limit on purpose (avoids throttling)
+
+frontend:
+  image: mk-platform/frontend
+  tag: ""                   # required, git SHA written by CI
+  port: 8080
+  minReplicas: 2
+  maxReplicas: 6
+  cpuTarget: 70
+  minAvailable: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+# Non-secret settings, stored in the ConfigMap "app-config"
+config:
+  dbHost: ""                # required, RDS endpoint
+  dbPort: "5432"
+  dbName: mk
+  dbSslmode: require
+  logLevel: INFO
+  allowedOrigins: ""        # empty = same origin only (no CORS)
+
+# Secrets are never stored in Git. External Secrets copies them from
+# AWS Secrets Manager into the Kubernetes Secret "app-secrets".
+secrets:
+  dbSecretId: ""            # Secrets Manager secret made by RDS (keys: username, password)
+  appSecretId: ""           # Secrets Manager secret holding {"secret_key": "..."}
+
+# Database migration Job (runs before the Deployments on every ArgoCD sync)
+migration:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 192Mi
+    limits:
+      memory: 384Mi
+
+ingress:
+  host: ""                  # e.g. mk.example.com. Empty = any host (use the ALB DNS name)
+  certificateArn: ""        # ACM certificate. Empty = HTTP only
+  deletionProtection: false # true for prod: the load balancer cannot be deleted by accident
+
+networkPolicy:
+  vpcCidr: ""               # required, the ALB and RDS live inside this CIDR

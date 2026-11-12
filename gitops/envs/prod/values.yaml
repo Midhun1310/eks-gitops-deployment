@@ -1,0 +1,23 @@
+# The image tags are copied from dev by .github/workflows/promote.yml (it opens a PR).
+backend:
+  tag: bootstrap
+  minReplicas: 3
+  maxReplicas: 10
+  minAvailable: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+frontend:
+  tag: bootstrap
+  minReplicas: 3
+  maxReplicas: 10
+  minAvailable: 2
+
+config:
+  logLevel: WARNING
+
+ingress:
+  deletionProtection: true

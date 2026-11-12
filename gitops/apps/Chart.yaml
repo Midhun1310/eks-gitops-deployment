@@ -1,0 +1,5 @@
+apiVersion: v2
+name: apps
+description: ArgoCD Applications for one cluster (app-of-apps). One file per Application in templates/.
+type: application
+version: 1.0.0

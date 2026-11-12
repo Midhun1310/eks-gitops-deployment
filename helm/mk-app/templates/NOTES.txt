@@ -1,0 +1,9 @@
+{{ .Chart.Name }} {{ .Chart.Version }} deployed to namespace {{ .Release.Namespace }}.
+
+  backend image : {{ .Values.imageRegistry }}/{{ .Values.backend.image }}:{{ .Values.backend.tag }}
+  frontend image: {{ .Values.imageRegistry }}/{{ .Values.frontend.image }}:{{ .Values.frontend.tag }}
+{{- if .Values.ingress.host }}
+  URL           : {{ if .Values.ingress.certificateArn }}https{{ else }}http{{ end }}://{{ .Values.ingress.host }}
+{{- else }}
+  URL           : kubectl -n {{ .Release.Namespace }} get ingress mk   (use the ALB DNS name)
+{{- end }}

@@ -1,0 +1,10 @@
+# dev: keep it small (overrides values.yaml)
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          resources: { requests: { storage: 10Gi } }
+alertmanager:
+  enabled: false

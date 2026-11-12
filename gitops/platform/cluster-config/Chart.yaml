@@ -1,0 +1,4 @@
+apiVersion: v2
+name: cluster-config
+description: Cluster-wide objects - gp3 StorageClass and the External Secrets ClusterSecretStore
+version: 1.0.0

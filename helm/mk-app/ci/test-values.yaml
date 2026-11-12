@@ -1,0 +1,16 @@
+# Fake values so CI can lint and render the chart without a cluster.
+imageRegistry: 123456789012.dkr.ecr.ap-south-1.amazonaws.com
+backend:
+  tag: abc1234
+frontend:
+  tag: abc1234
+config:
+  dbHost: mk-dev.abc123.ap-south-1.rds.amazonaws.com
+secrets:
+  dbSecretId: rds!db-1111
+  appSecretId: mk/dev/app
+ingress:
+  host: mk.dev.example.com
+  certificateArn: arn:aws:acm:ap-south-1:123456789012:certificate/00000000-0000-0000-0000-000000000000
+networkPolicy:
+  vpcCidr: 10.20.0.0/16

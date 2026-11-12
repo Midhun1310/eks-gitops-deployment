@@ -1,0 +1,27 @@
+# Settings for the ArgoCD Helm chart. Used by scripts/bootstrap-argocd.sh.
+global:
+  logging:
+    format: json
+
+configs:
+  params:
+    server.insecure: false
+  cm:
+    application.resourceTrackingMethod: annotation
+    timeout.reconciliation: 180s
+    exec.enabled: false
+  rbac:
+    policy.default: role:readonly   # read-only by default; give write access through SSO groups
+
+dex:
+  enabled: false                    # turn on and connect GitHub/Okta for real SSO
+
+redis-ha:
+  enabled: false                    # prod: set true and run more than one replica
+
+notifications:
+  enabled: false
+
+server:
+  service:
+    type: ClusterIP                 # reach it with: kubectl -n argocd port-forward svc/argocd-server 8080:443

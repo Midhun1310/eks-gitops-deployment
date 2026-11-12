@@ -1,0 +1,39 @@
+{{- if .Values.cluster.external_dns_enabled }}
+# Creates the Route53 DNS record for the app hostname. Only when a Route53 zone is configured.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+spec:
+  project: platform
+  sources:
+    - repoURL: https://kubernetes-sigs.github.io/external-dns/
+      chart: external-dns
+      targetRevision: {{ .Values.versions.externalDns }}
+      helm:
+        valueFiles:
+          - $values/gitops/platform/external-dns/values.yaml
+        valuesObject:
+          txtOwnerId: {{ .Values.cluster.cluster_name }}
+          extraArgs:
+            - --zone-id-filter={{ .Values.cluster.route53_zone_id }}
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.branch }}
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-dns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 3m
+{{- end }}

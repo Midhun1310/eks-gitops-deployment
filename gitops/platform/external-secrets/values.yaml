@@ -1,0 +1,8 @@
+installCRDs: true
+replicaCount: 2
+serviceAccount:
+  name: external-secrets               # bound to the IAM role by EKS Pod Identity (Terraform)
+podDisruptionBudget: { enabled: true, minAvailable: 1 }
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 256Mi }

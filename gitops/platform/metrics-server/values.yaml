@@ -1,0 +1,3 @@
+# Required by the HPAs in the mk chart. Defaults are fine on EKS.
+replicas: 2
+podDisruptionBudget: { enabled: true, minAvailable: 1 }

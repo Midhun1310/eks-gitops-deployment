@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["imageRegistry", "backend", "frontend", "config", "secrets", "networkPolicy"],
+  "properties": {
+    "imageRegistry": { "type": "string", "minLength": 1 },
+    "backend": {
+      "type": "object",
+      "required": ["tag"],
+      "properties": { "tag": { "type": "string", "minLength": 1 } }
+    },
+    "frontend": {
+      "type": "object",
+      "required": ["tag"],
+      "properties": { "tag": { "type": "string", "minLength": 1 } }
+    },
+    "config": {
+      "type": "object",
+      "required": ["dbHost"],
+      "properties": {
+        "dbHost": { "type": "string", "minLength": 1 },
+        "dbSslmode": { "enum": ["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "required": ["dbSecretId", "appSecretId"],
+      "properties": {
+        "dbSecretId": { "type": "string", "minLength": 1 },
+        "appSecretId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "required": ["vpcCidr"],
+      "properties": { "vpcCidr": { "type": "string", "minLength": 1 } }
+    }
+  }
+}

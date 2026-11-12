@@ -1,0 +1,23 @@
+# Shared settings used by every Application in templates/.
+repoURL: https://github.com/YOUR_GH_USER/devops-mk-platform.git
+branch: main
+
+# Helm chart versions of the platform add-ons. Pinned; change them through a PR.
+versions:
+  awsLoadBalancerController: 3.6.2
+  externalSecrets: 2.14.0
+  externalDns: 1.23.0
+  metricsServer: 3.14.0
+  reloader: 2.2.19
+  kubePrometheusStack: 93.1.0
+
+# true  = ArgoCD deploys the mk app automatically (dev)
+# false = a person presses Sync after reviewing the change (prod)
+autoSync: false
+
+# Facts about this cluster. NOT stored in Git: scripts/bootstrap-argocd.sh copies the
+# Terraform output "cluster_facts" into the root Application, so nothing is typed by hand.
+# Keys: environment, aws_region, cluster_name, vpc_id, vpc_cidr, ecr_registry, app_namespace,
+#       app_hostname, route53_zone_id, acm_certificate_arn, rds_endpoint, rds_secret_arn,
+#       app_secret_name, external_dns_enabled
+cluster: {}

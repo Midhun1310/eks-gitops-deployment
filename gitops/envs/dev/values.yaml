@@ -1,0 +1,10 @@
+# CI (.github/workflows/ci.yml) rewrites the two image tags on every merge to main.
+# Cluster facts (DB host, registry, certificate, ...) do NOT belong here: they come from Terraform.
+backend:
+  tag: bootstrap          # replaced by CI with the git SHA
+  minReplicas: 2
+  maxReplicas: 4
+frontend:
+  tag: bootstrap
+  minReplicas: 2
+  maxReplicas: 4

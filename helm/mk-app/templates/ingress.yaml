@@ -1,0 +1,46 @@
+# One AWS Application Load Balancer: /api -> backend, everything else -> frontend.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mk
+  labels:
+    app.kubernetes.io/part-of: mk-platform
+    environment: {{ .Values.environment }}
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/tags: Project=mk-platform,Environment={{ .Values.environment }},ManagedBy=argocd
+    alb.ingress.kubernetes.io/load-balancer-attributes: deletion_protection.enabled={{ .Values.ingress.deletionProtection }},routing.http.drop_invalid_header_fields.enabled=true
+    {{- if .Values.ingress.certificateArn }}
+    # HTTPS: certificate from ACM, HTTP redirects to HTTPS
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.ingress.certificateArn }}
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    {{- else }}
+    # No certificate: HTTP only (fine for dev without a domain)
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    {{- end }}
+    {{- if .Values.ingress.host }}
+    external-dns.alpha.kubernetes.io/hostname: {{ .Values.ingress.host }}
+    {{- end }}
+spec:
+  ingressClassName: alb
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: {{ .Values.backend.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: {{ .Values.frontend.port }}

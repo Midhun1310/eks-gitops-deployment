@@ -1,0 +1,16 @@
+# Fake cluster facts so CI can render this chart without a cluster.
+cluster:
+  environment: dev
+  aws_region: ap-south-1
+  cluster_name: mk-dev
+  vpc_id: vpc-0123456789abcdef0
+  vpc_cidr: 10.20.0.0/16
+  ecr_registry: 123456789012.dkr.ecr.ap-south-1.amazonaws.com
+  app_namespace: mk
+  app_hostname: mk.dev.example.com
+  route53_zone_id: Z0123456789ABC
+  acm_certificate_arn: arn:aws:acm:ap-south-1:123456789012:certificate/00000000-0000-0000-0000-000000000000
+  rds_endpoint: mk-dev-db.abc123.ap-south-1.rds.amazonaws.com
+  rds_secret_arn: arn:aws:secretsmanager:ap-south-1:123456789012:secret:rds!db-1111
+  app_secret_name: mk/dev/app
+  external_dns_enabled: true

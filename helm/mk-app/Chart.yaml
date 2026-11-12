@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mk-app
+description: mk platform - React frontend, Flask backend, RDS PostgreSQL on EKS
+type: application
+version: 1.0.0      # chart version: bump when the chart changes
+appVersion: "1.0.0" # informational only; real image tags come from values (written by CI)

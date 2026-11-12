@@ -1,0 +1,34 @@
+# AppProject = a permission boundary for Applications.
+# "platform": cluster add-ons, may install anywhere.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Cluster add-ons (controllers, monitoring)
+  sourceRepos:
+    - "*"
+  destinations:
+    - server: "*"
+      namespace: "*"
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+---
+# "mk": the application, limited to its own namespace and this Git repository.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: mk
+  namespace: argocd
+spec:
+  description: The mk application, confined to its own namespace
+  sourceRepos:
+    - {{ .Values.repoURL }}
+  destinations:
+    - server: "*"
+      namespace: {{ .Values.cluster.app_namespace }}
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace          # only so CreateNamespace works

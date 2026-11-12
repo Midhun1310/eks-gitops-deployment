@@ -1,0 +1,56 @@
+# The mk application: chart in helm/mk-app, values from gitops/envs/<env>/values.yaml
+# plus the cluster facts below (they come from Terraform).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mk
+  namespace: argocd
+spec:
+  project: mk
+  sources:
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.branch }}
+      path: helm/mk-app
+      helm:
+        valueFiles:
+          - $values/gitops/envs/{{ .Values.cluster.environment }}/values.yaml
+        valuesObject:
+          environment: {{ .Values.cluster.environment }}
+          imageRegistry: {{ .Values.cluster.ecr_registry }}
+          config:
+            dbHost: {{ .Values.cluster.rds_endpoint }}
+          secrets:
+            dbSecretId: {{ .Values.cluster.rds_secret_arn }}
+            appSecretId: {{ .Values.cluster.app_secret_name }}
+          ingress:
+            host: {{ .Values.cluster.app_hostname | quote }}
+            certificateArn: {{ .Values.cluster.acm_certificate_arn | quote }}
+          networkPolicy:
+            vpcCidr: {{ .Values.cluster.vpc_cidr }}
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.branch }}
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.cluster.app_namespace }}
+  syncPolicy:
+    {{- if .Values.autoSync }}
+    automated:
+      prune: true
+      selfHeal: true
+    {{- end }}
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+      - PruneLast=true
+    managedNamespaceMetadata:        # Pod Security "restricted" for the app namespace
+      labels:
+        pod-security.kubernetes.io/enforce: restricted
+        pod-security.kubernetes.io/audit: restricted
+        pod-security.kubernetes.io/warn: restricted
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 3m

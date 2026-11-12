@@ -1,0 +1,9 @@
+provider:
+  name: aws
+sources: [ingress]
+policy: upsert-only                    # never deletes records it did not create
+serviceAccount:
+  name: external-dns                   # bound to the IAM role by EKS Pod Identity (Terraform)
+resources:
+  requests: { cpu: 25m, memory: 64Mi }
+  limits: { memory: 128Mi }

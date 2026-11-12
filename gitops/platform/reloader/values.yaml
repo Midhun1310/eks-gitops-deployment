@@ -1,0 +1,5 @@
+# Restarts Deployments annotated reloader.stakater.com/auto when their Secret/ConfigMap changes -
+# needed because RDS rotates the master password in Secrets Manager.
+reloader:
+  watchGlobally: true
+  reloadOnCreate: false

@@ -1,0 +1,33 @@
+# Gives the autoscalers (HPA) their CPU numbers.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  namespace: argocd
+spec:
+  project: platform
+  sources:
+    - repoURL: https://kubernetes-sigs.github.io/metrics-server/
+      chart: metrics-server
+      targetRevision: {{ .Values.versions.metricsServer }}
+      helm:
+        valueFiles:
+          - $values/gitops/platform/metrics-server/values.yaml
+    - repoURL: {{ .Values.repoURL }}
+      targetRevision: {{ .Values.branch }}
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 3m

@@ -1,0 +1,1 @@
+region: ""   # injected by the ApplicationSet from the cluster annotation aws_region

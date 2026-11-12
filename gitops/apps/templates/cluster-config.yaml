@@ -1,0 +1,31 @@
+# gp3 StorageClass + the ClusterSecretStore that lets External Secrets read AWS Secrets Manager.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-config
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: {{ .Values.repoURL }}
+    targetRevision: {{ .Values.branch }}
+    path: gitops/platform/cluster-config
+    helm:
+      parameters:
+        - name: region
+          value: {{ .Values.cluster.aws_region }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - SkipDryRunOnMissingResource=true   # the ClusterSecretStore CRD arrives with external-secrets
+    retry:
+      limit: 10
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 5m

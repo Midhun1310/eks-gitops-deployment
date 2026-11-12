@@ -1,0 +1,9 @@
+replicaCount: 2
+serviceAccount:
+  create: true
+  name: aws-load-balancer-controller   # bound to the IAM role by EKS Pod Identity (Terraform)
+podDisruptionBudget:
+  maxUnavailable: 1
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 256Mi }

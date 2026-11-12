@@ -1,0 +1,157 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: app/backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: app/backend/requirements*.txt }
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: pytest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: app/frontend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm, cache-dependency-path: app/frontend/package-lock.json }
+      - run: npm ci --no-audit --no-fund
+      - run: CI=true npm test -- --watchAll=false
+      - run: npm run build
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Install kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+      - run: helm lint helm/mk-app -f helm/mk-app/ci/test-values.yaml
+      - name: Render and validate against the Kubernetes API schema
+        run: |
+          helm template mk helm/mk-app -n mk -f helm/mk-app/ci/test-values.yaml \
+            | kubeconform -strict -ignore-missing-schemas -summary -kubernetes-version 1.35.0
+      - name: Lint platform chart
+        run: helm lint gitops/platform/cluster-config --set region=ap-south-1
+      - name: Render the ArgoCD apps chart (dev and prod)
+        run: |
+          for env in dev prod; do
+            helm template apps gitops/apps -f gitops/apps/values-$env.yaml -f gitops/apps/ci/test-values.yaml > /dev/null
+          done
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.10.5" }
+      - run: terraform fmt -check -recursive terraform
+      - name: validate every root module
+        run: |
+          for d in terraform/bootstrap terraform/envs/dev terraform/envs/prod; do
+            echo "::group::$d"
+            terraform -chdir=$d init -backend=false -input=false
+            terraform -chdir=$d validate
+            echo "::endgroup::"
+          done
+
+  iac-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy config scan (Terraform, Helm, Dockerfiles, K8s manifests)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "0"   # report-only at first; flip to "1" once findings are triaged
+
+  # images:
+  #   needs: [backend, frontend, helm]
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       component: [backend, frontend]
+  #   permissions:
+  #     contents: read
+  #     id-token: write   # OIDC -> AWS
+  #   outputs:
+  #     tag: ${{ steps.meta.outputs.tag }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - id: meta
+  #       run: echo "tag=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+  #     - uses: docker/setup-buildx-action@v3
+  #     - name: Build (not pushed yet)
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: app/${{ matrix.component }}
+  #         load: true
+  #         tags: mk-${{ matrix.component }}:scan
+  #         cache-from: type=gha,scope=${{ matrix.component }}
+  #         cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+  #     - name: Vulnerability scan (fails on fixable HIGH/CRITICAL)
+  #       uses: aquasecurity/trivy-action@0.28.0
+  #       with:
+  #         image-ref: mk-${{ matrix.component }}:scan
+  #         severity: HIGH,CRITICAL
+  #         ignore-unfixed: true
+  #         exit-code: "1"
+  #     - name: Configure AWS credentials (OIDC, no stored keys)
+  #       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         role-to-assume: ${{ vars.ECR_PUSH_ROLE_ARN }}
+  #         aws-region: ${{ vars.AWS_REGION }}
+  #     - name: Login to ECR
+  #       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #       uses: aws-actions/amazon-ecr-login@v2
+  #     - name: Push immutable, SHA-tagged image
+  #       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: app/${{ matrix.component }}
+  #         push: true
+  #         provenance: true
+  #         sbom: true
+  #         tags: ${{ vars.ECR_REGISTRY }}/mk-platform/${{ matrix.component }}:${{ steps.meta.outputs.tag }}
+  #         cache-from: type=gha,scope=${{ matrix.component }}
+
+  # deploy-dev:
+  #   # GitOps: CI never touches the cluster. It records the new image tag in Git; ArgoCD syncs it.
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   needs: images
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Bump image tags in gitops/envs/dev
+  #       run: |
+  #         yq -i '.backend.tag = "${{ needs.images.outputs.tag }}" | .frontend.tag = "${{ needs.images.outputs.tag }}"' gitops/envs/dev/values.yaml
+  #     - name: Commit
+  #       run: |
+  #         git config user.name  "github-actions[bot]"
+  #         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+  #         git add gitops/envs/dev/values.yaml
+  #         git commit -m "deploy(dev): ${{ needs.images.outputs.tag }}" || exit 0
+  #         git pull --rebase origin main
+  #         git push
